@@ -88,6 +88,9 @@ class RunConfig:
             if self.dataset == 'imagenet':
                 from data_providers.imagenet import ImagenetDataProvider
                 self._data_provider = ImagenetDataProvider(**self.data_config)
+            elif self.dataset == 'cifar10':
+                from data_providers.cifar10 import CIFARDataProvider
+                self._data_provider = CIFARDataProvider(**self.data_config)
             else:
                 raise ValueError('do not support: %s' % self.dataset)
         return self._data_provider
@@ -182,7 +185,8 @@ class RunManager:
         # move network to GPU if available
         if torch.cuda.is_available():
             self.device = torch.device('cuda:0')
-            self.net = torch.nn.DataParallel(self.net)
+            # clipped DataParallel
+            # self.net = torch.nn.DataParallel(self.net)
             self.net.to(self.device)
             cudnn.benchmark = True
         else:
@@ -200,7 +204,10 @@ class RunManager:
                 self.net.module.get_parameters(keys, mode='include'),  # parameters without weight decay
             ])
         else:
-            self.optimizer = self.run_config.build_optimizer(self.net.module.weight_parameters())
+            if isinstance(self.net, nn.DataParallel):
+                self.optimizer = self.run_config.build_optimizer(self.net.module.weight_parameters())
+            else:
+                self.optimizer = self.run_config.build_optimizer(self.net.weight_parameters())
 
     """ save path and log path """
 

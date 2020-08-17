@@ -4,7 +4,7 @@
 
 from modules.layers import *
 import json
-
+from torch import nn
 
 def proxyless_base(net_config=None, n_classes=1000, bn_param=(0.1, 1e-3), dropout_rate=0):
     assert net_config is not None, 'Please input a network config'
@@ -85,9 +85,15 @@ class ProxylessNASNets(MyNetwork):
         for block in self.blocks:
             x = block(x)
         x = self.feature_mix_layer(x)
-        x = self.global_avg_pooling(x)
-        x = x.view(x.size(0), -1)  # flatten
-        x = self.classifier(x)
+       
+        if isinstance(self.classifier, nn.ModuleList):
+            for module in self.classifier:
+                x = x.view(x.size(0), -1)  # flatten
+                x = module(x)
+        else:
+            x = self.global_avg_pooling(x)
+            x = x.view(x.size(0), -1)  # flatten
+            x = self.classifier(x)
         return x
 
     @property
@@ -99,16 +105,28 @@ class ProxylessNASNets(MyNetwork):
 
     @property
     def config(self):
-        return {
-            'name': ProxylessNASNets.__name__,
-            'bn': self.get_bn_param(),
-            'first_conv': self.first_conv.config,
-            'blocks': [
-                block.config for block in self.blocks
-            ],
-            'feature_mix_layer': self.feature_mix_layer.config,
-            'classifier': self.classifier.config,
-        }
+        if isinstance (self.classifier, nn.ModuleList):
+            return {
+                'name': ProxylessNASNets.__name__,
+                'bn': self.get_bn_param(),
+                'first_conv': self.first_conv.config,
+                'blocks': [
+                    block.config for block in self.blocks
+                ],
+                'feature_mix_layer': self.feature_mix_layer.config,
+                'classifier': [self.classifier[0].config, self.classifier[1].config],
+            }
+        else:
+            return {
+                'name': ProxylessNASNets.__name__,
+                'bn': self.get_bn_param(),
+                'first_conv': self.first_conv.config,
+                'blocks': [
+                    block.config for block in self.blocks
+                ],
+                'feature_mix_layer': self.feature_mix_layer.config,
+                'classifier': self.classifier.config,
+            }
 
     @staticmethod
     def build_from_config(config):
@@ -137,9 +155,16 @@ class ProxylessNASNets(MyNetwork):
         delta_flop, x = self.feature_mix_layer.get_flops(x)
         flop += delta_flop
 
-        x = self.global_avg_pooling(x)
-        x = x.view(x.size(0), -1)  # flatten
+        if isinstance(self.classifier, nn.ModuleList):
+            x = x.view(x.size(0), -1)  # flatten
 
-        delta_flop, x = self.classifier.get_flops(x)
-        flop += delta_flop
+            for module in self.classifier:
+                delta_flop, x = module.get_flops(x)
+                flop += delta_flop
+        else:
+            x = self.global_avg_pooling(x)
+            x = x.view(x.size(0), -1)  # flatten
+
+            delta_flop, x = self.classifier.get_flops(x)
+            flop += delta_flop
         return flop, x

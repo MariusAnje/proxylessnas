@@ -42,6 +42,14 @@ def build_candidate_ops(candidate_ops, in_channels, out_channels, stride, ops_or
         '7x7_MBConv6': lambda in_C, out_C, S: MBInvertedConvLayer(in_C, out_C, 7, S, 6),
     })
 
+    name2ops.update({
+        '3x3_MBConv1': lambda in_C, out_C, S: MBInvertedConvLayer(in_C, out_C, 3, S, 1),
+        'CONV1': lambda in_C, out_C, S: ConvLayer(in_C, out_C, 1, S),
+        'CONV3': lambda in_C, out_C, S: ConvLayer(in_C, out_C, 3, S),
+        'CONV5': lambda in_C, out_C, S: ConvLayer(in_C, out_C, 5, S),
+        'CONV7': lambda in_C, out_C, S: ConvLayer(in_C, out_C, 7, S),
+    })
+
     return [
         name2ops[name](in_channels, out_channels, stride) for name in candidate_ops
     ]

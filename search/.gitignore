@@ -14,3 +14,10 @@ checkpoints/cache
 
 # pycharm
 *.idea*
+
+# New
+*.tar*
+*.txt*
+init
+*.config
+*.ipynb

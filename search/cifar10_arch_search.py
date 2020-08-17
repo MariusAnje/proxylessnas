@@ -4,9 +4,9 @@
 
 import argparse
 
-from models import ImagenetRunConfig
+from models import ImagenetRunConfig, CIFAR10RunConfig
 from nas_manager import *
-from models.super_nets.super_proxyless import SuperProxylessNASNets
+from models.super_nets.super_proxyless import SuperProxylessNASNets, CIFARProxylessNASNets
 
 # ref values
 ref_values = {
@@ -39,7 +39,7 @@ parser.add_argument('--init_lr', type=float, default=0.025)
 parser.add_argument('--lr_schedule_type', type=str, default='cosine')
 # lr_schedule_param
 
-parser.add_argument('--dataset', type=str, default='imagenet', choices=['imagenet', 'cifar10'])
+parser.add_argument('--dataset', type=str, default='cifar10', choices=['imagenet', 'cifar10'])
 parser.add_argument('--train_batch_size', type=int, default=256)
 parser.add_argument('--test_batch_size', type=int, default=1000)
 # parser.add_argument('--valid_size', type=int, default=50000) # this line deleted
@@ -57,12 +57,12 @@ parser.add_argument('--init_div_groups', action='store_true')
 parser.add_argument('--validation_frequency', type=int, default=1)
 parser.add_argument('--print_frequency', type=int, default=10)
 
-parser.add_argument('--n_worker', type=int, default=32)
+parser.add_argument('--n_worker', type=int, default=4)
 parser.add_argument('--resize_scale', type=float, default=0.08)
 parser.add_argument('--distort_color', type=str, default='normal', choices=['normal', 'strong', 'None'])
 
 """ net config """
-parser.add_argument('--width_stages', type=str, default='24,40,80,96,192,320')
+parser.add_argument('--width_stages', type=str, default='128, 128, 256, 256, 512, 512')
 parser.add_argument('--n_cell_stages', type=str, default='4,4,4,4,4,1')
 parser.add_argument('--stride_stages', type=str, default='2,2,2,1,2,1')
 parser.add_argument('--width_mult', type=float, default=1.0)
@@ -73,7 +73,7 @@ parser.add_argument('--dropout', type=float, default=0)
 # architecture search config
 """ arch search algo and warmup """
 parser.add_argument('--arch_algo', type=str, default='grad', choices=['grad', 'rl'])
-parser.add_argument('--warmup_epochs', type=int, default=40)
+parser.add_argument('--warmup_epochs', type=int, default=5)
 """ shared hyper-parameters """
 parser.add_argument('--arch_init_type', type=str, default='normal', choices=['normal', 'uniform'])
 parser.add_argument('--arch_init_ratio', type=float, default=1e-3)
@@ -118,7 +118,7 @@ if __name__ == '__main__':
         'momentum': args.momentum,
         'nesterov': not args.no_nesterov,
     }
-    run_config = ImagenetRunConfig(
+    run_config = CIFAR10RunConfig(
         **args.__dict__
     )
 
@@ -135,11 +135,9 @@ if __name__ == '__main__':
     args.n_cell_stages = [int(val) for val in args.n_cell_stages.split(',')]
     args.stride_stages = [int(val) for val in args.stride_stages.split(',')]
     args.conv_candidates = [
-        '3x3_MBConv3', '3x3_MBConv6',
-        '5x5_MBConv3', '5x5_MBConv6',
-        '7x7_MBConv3', '7x7_MBConv6',
+        'CONV1', 'CONV3', 'CONV5', 'CONV7'
     ]
-    super_net = SuperProxylessNASNets(
+    super_net = CIFARProxylessNASNets(
         width_stages=args.width_stages, n_cell_stages=args.n_cell_stages, stride_stages=args.stride_stages,
         conv_candidates=args.conv_candidates, n_classes=run_config.data_provider.n_classes, width_mult=args.width_mult,
         bn_param=(args.bn_momentum, args.bn_eps), dropout_rate=args.dropout
