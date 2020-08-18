@@ -28,8 +28,11 @@ def download_url(url, model_dir='~/.torch/proxyless_nas', overwrite=False):
 
 class LatencyEstimator(object):
     def __init__(self, url='https://file.lzhu.me/projects/proxylessNAS/LatencyTools/mobile_trim.yaml'):
-        fname = download_url(url, overwrite=True)
-        # fname = "C:\\Users\\Mariu/.torch/proxyless_nas\\file.lzhu.me/projects/proxylessNAS/LatencyTools\\mobile_trim.yaml"
+        # fname = download_url(url, overwrite=True)
+        if os.name == "nt":
+            fname = "C:\\Users\\Mariu/.torch/proxyless_nas\\file.lzhu.me/projects/proxylessNAS/LatencyTools\\mobile_trim.yaml"
+        else:
+            fname = "~/.torch/proxyless_nas/file.lzhu.me/projects/proxylessNAS/LatencyTools/mobile_trim.yaml"
 
         with open(fname, 'r') as fp:
             self.lut = yaml.load(fp)
