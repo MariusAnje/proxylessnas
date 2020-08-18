@@ -35,15 +35,16 @@ parser.add_argument('--manual_seed', default=0, type=int)
 
 """ run config """
 parser.add_argument('--n_epochs', type=int, default=120)
-parser.add_argument('--init_lr', type=float, default=0.025)
+# parser.add_argument('--init_lr', type=float, default=0.025)
+parser.add_argument('--init_lr', type=float, default=0)
 parser.add_argument('--lr_schedule_type', type=str, default='cosine')
 # lr_schedule_param
 
 parser.add_argument('--dataset', type=str, default='cifar10', choices=['imagenet', 'cifar10'])
 parser.add_argument('--train_batch_size', type=int, default=256)
-parser.add_argument('--test_batch_size', type=int, default=1000)
+parser.add_argument('--test_batch_size', type=int, default=256)
 # parser.add_argument('--valid_size', type=int, default=50000) # this line deleted
-parser.add_argument('--valid_size', type=int, default=1) # this line added
+parser.add_argument('--valid_size', type=int, default=None) # this line added
 
 parser.add_argument('--opt_type', type=str, default='sgd', choices=['sgd'])
 parser.add_argument('--momentum', type=float, default=0.9)  # opt_param
@@ -52,7 +53,7 @@ parser.add_argument('--weight_decay', type=float, default=4e-5)
 parser.add_argument('--label_smoothing', type=float, default=0.1)
 parser.add_argument('--no_decay_keys', type=str, default=None, choices=[None, 'bn', 'bn#bias'])
 
-parser.add_argument('--model_init', type=str, default='he_fout', choices=['he_fin', 'he_fout'])
+parser.add_argument('--model_init', type=str, default='he_fin', choices=['he_fin', 'he_fout', 'None'])
 parser.add_argument('--init_div_groups', action='store_true')
 parser.add_argument('--validation_frequency', type=int, default=1)
 parser.add_argument('--print_frequency', type=int, default=10)

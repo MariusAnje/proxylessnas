@@ -18,7 +18,7 @@ class CIFARDataProvider(DataProvider):
         self._save_path = save_path
         train_transforms = self.build_train_transform(distort_color, resize_scale)
         test_transforms = transforms.Compose([transforms.ToTensor(),self.normalize])
-        train_dataset = torchvision.datasets.CIFAR10(root=self.train_path, train=True, download=True, transform=train_transforms)
+        train_dataset = torchvision.datasets.CIFAR10(root=self.train_path, train=True, download=False, transform=train_transforms)
 
         if valid_size is not None:
             if isinstance(valid_size, float):
@@ -32,7 +32,7 @@ class CIFARDataProvider(DataProvider):
             valid_sampler = torch.utils.data.sampler.SubsetRandomSampler(valid_indexes)
 
         
-            valid_dataset = torchvision.datasets.CIFAR10(root=self.train_path, train=True, download=True, transform=test_transforms)
+            valid_dataset = torchvision.datasets.CIFAR10(root=self.train_path, train=True, download=False, transform=test_transforms)
 
             self.train = torch.utils.data.DataLoader(
                 train_dataset, batch_size=train_batch_size, sampler=train_sampler,
@@ -50,7 +50,7 @@ class CIFARDataProvider(DataProvider):
             self.valid = None
 
         self.test = torch.utils.data.DataLoader(
-            torchvision.datasets.CIFAR10(root=self.valid_path, train=False, download=True, transform=test_transforms), 
+            torchvision.datasets.CIFAR10(root=self.valid_path, train=False, download=False, transform=test_transforms), 
             batch_size=test_batch_size, shuffle=False, num_workers=n_worker, pin_memory=True,
         )
 

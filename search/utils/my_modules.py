@@ -77,6 +77,8 @@ class MyNetwork(MyModule):
                     if init_div_groups:
                         n /= m.groups
                     m.weight.data.normal_(0, math.sqrt(2. / n))
+                elif model_init == 'None':
+                    pass
                 else:
                     raise NotImplementedError
             elif isinstance(m, nn.BatchNorm2d):
