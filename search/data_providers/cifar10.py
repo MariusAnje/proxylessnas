@@ -26,7 +26,7 @@ class CIFARDataProvider(DataProvider):
             else:
                 assert isinstance(valid_size, int), 'invalid valid_size: %s' % valid_size
             train_indexes, valid_indexes = self.random_sample_valid_set(
-                list(range(10)), valid_size, self.n_classes,
+                train_dataset.targets, valid_size, self.n_classes,
             )
             train_sampler = torch.utils.data.sampler.SubsetRandomSampler(train_indexes)
             valid_sampler = torch.utils.data.sampler.SubsetRandomSampler(valid_indexes)

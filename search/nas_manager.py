@@ -246,7 +246,7 @@ class ArchSearchRunManager:
         return valid_res, flops, latency
 
     def warm_up(self, warmup_epochs=25):
-        lr_max = 1e-10
+        lr_max = 1e-3
         data_loader = self.run_manager.run_config.train_loader
         nBatch = len(data_loader)
         T_total = warmup_epochs * nBatch
