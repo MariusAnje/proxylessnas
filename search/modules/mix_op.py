@@ -6,6 +6,7 @@ import numpy as np
 
 from torch.nn.parameter import Parameter
 import torch.nn.functional as F
+import torch
 
 from modules.layers import *
 from modules.layers import QuantConvLayer
@@ -226,17 +227,16 @@ class MixedEdge(MyModule):
                 param.grad = None
 
     def set_arch_param_grad(self):
-        print("here 1")
-        binary_grads = self.AP_path_wb.grad.data
-        print("here 2")
+        if self.AP_path_wb.grad is not None:
+            binary_grads = self.AP_path_wb.grad.data
+        else:
+            binary_grads = torch.zeros_like(self.AP_path_wb)
         if self.active_op.is_zero_layer():
             self.AP_path_alpha.grad = None
             return
-        print("here 3")
         if self.AP_path_alpha.grad is None:
             self.AP_path_alpha.grad = torch.zeros_like(self.AP_path_alpha.data)
         if MixedEdge.MODE == 'two':
-            print("here 4")
             involved_idx = self.active_index + self.inactive_index
             probs_slice = F.softmax(torch.stack([
                 self.AP_path_alpha[idx] for idx in involved_idx
@@ -252,7 +252,6 @@ class MixedEdge(MyModule):
             for _i, idx in enumerate(self.inactive_index):
                 self.inactive_index[_i] = (idx, self.AP_path_alpha.data[idx].item())
         else:
-            print("here 5")
             probs = self.probs_over_ops.data
             for i in range(self.n_choices):
                 for j in range(self.n_choices):

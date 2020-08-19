@@ -6,7 +6,7 @@ import argparse
 
 from models import ImagenetRunConfig, CIFAR10RunConfig
 from nas_manager import *
-from models.super_nets.super_proxyless import SuperProxylessNASNets, CIFARProxylessNASNets
+from models.super_nets.super_proxyless import SuperProxylessNASNets, CIFARProxylessNASNets, QuantCIFARProxylessNASNets
 
 # ref values
 ref_values = {
@@ -35,8 +35,8 @@ parser.add_argument('--manual_seed', default=0, type=int)
 
 """ run config """
 parser.add_argument('--n_epochs', type=int, default=120)
-parser.add_argument('--init_lr', type=float, default=0.025)
-# parser.add_argument('--init_lr', type=float, default=0)
+# parser.add_argument('--init_lr', type=float, default=0.025)
+parser.add_argument('--init_lr', type=float, default=1e-3)
 parser.add_argument('--lr_schedule_type', type=str, default='cosine')
 # lr_schedule_param
 
@@ -100,6 +100,8 @@ parser.add_argument('--rl_update_per_epoch', action='store_true')
 parser.add_argument('--rl_update_steps_per_epoch', type=int, default=300)
 parser.add_argument('--rl_baseline_decay_weight', type=float, default=0.99)
 parser.add_argument('--rl_tradeoff_ratio', type=float, default=0.1)
+""" Other hyper-parameters"""
+parser.add_argument('--quant', type=bool, default=True)
 
 
 if __name__ == '__main__':
@@ -135,14 +137,25 @@ if __name__ == '__main__':
     args.width_stages = [int(val) for val in args.width_stages.split(',')]
     args.n_cell_stages = [int(val) for val in args.n_cell_stages.split(',')]
     args.stride_stages = [int(val) for val in args.stride_stages.split(',')]
-    args.conv_candidates = [
-        'QCONV1', 'QCONV3', 'QCONV5', 'QCONV7'
-    ]
-    super_net = CIFARProxylessNASNets(
-        width_stages=args.width_stages, n_cell_stages=args.n_cell_stages, stride_stages=args.stride_stages,
-        conv_candidates=args.conv_candidates, n_classes=run_config.data_provider.n_classes, width_mult=args.width_mult,
-        bn_param=(args.bn_momentum, args.bn_eps), dropout_rate=args.dropout
-    )
+
+    if args.quant:
+        args.conv_candidates = [
+            'QCONV1', 'QCONV3', 'QCONV5', 'QCONV7'
+        ]
+        super_net = QuantCIFARProxylessNASNets(
+            width_stages=args.width_stages, n_cell_stages=args.n_cell_stages, stride_stages=args.stride_stages,
+            conv_candidates=args.conv_candidates, n_classes=run_config.data_provider.n_classes, width_mult=args.width_mult,
+            bn_param=(args.bn_momentum, args.bn_eps), dropout_rate=args.dropout
+        )
+    else:
+        args.conv_candidates = [
+            'CONV1', 'CONV3', 'CONV5', 'CONV7'
+        ]
+        super_net = CIFARProxylessNASNets(
+            width_stages=args.width_stages, n_cell_stages=args.n_cell_stages, stride_stages=args.stride_stages,
+            conv_candidates=args.conv_candidates, n_classes=run_config.data_provider.n_classes, width_mult=args.width_mult,
+            bn_param=(args.bn_momentum, args.bn_eps), dropout_rate=args.dropout
+        )
     # build arch search config from args
     if args.arch_opt_type == 'adam':
         args.arch_opt_param = {
