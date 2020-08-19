@@ -35,8 +35,8 @@ parser.add_argument('--manual_seed', default=0, type=int)
 
 """ run config """
 parser.add_argument('--n_epochs', type=int, default=120)
-# parser.add_argument('--init_lr', type=float, default=0.025)
-parser.add_argument('--init_lr', type=float, default=0)
+parser.add_argument('--init_lr', type=float, default=0.025)
+# parser.add_argument('--init_lr', type=float, default=0)
 parser.add_argument('--lr_schedule_type', type=str, default='cosine')
 # lr_schedule_param
 

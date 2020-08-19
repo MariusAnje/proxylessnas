@@ -121,6 +121,7 @@ class CIFARProxylessNASNets(ProxylessNASNets):
                 m.set_arch_param_grad()
             except AttributeError:
                 print(type(m), ' do not support `set_arch_param_grad()`')
+                exit()
 
     def rescale_updated_arch_param(self):
         for m in self.redundant_modules:
