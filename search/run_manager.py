@@ -174,6 +174,7 @@ class RunManager:
         self._logs_path, self._save_path = None, None
         self.best_acc = 0
         self.start_epoch = 0
+        self.gpu = run_config.gpu
 
         # initialize model (default)
         self.net.init_model(run_config.model_init, run_config.init_div_groups)
@@ -184,13 +185,17 @@ class RunManager:
 
         # move network to GPU if available
         if torch.cuda.is_available():
-            self.device = torch.device('cuda:0')
-            # clipped DataParallel
-            # self.net = torch.nn.DataParallel(self.net)
+            try:
+                device_index = int(self.gpu)
+                self.device = torch.device(f'cuda:{device_index}')
+            except:
+                self.device = torch.device('cuda:0')
+                self.net = torch.nn.DataParallel(self.net)
+
             self.net.to(self.device)
             cudnn.benchmark = True
         else:
-            raise ValueError
+            raise ValueError("No GPU")
             # self.device = torch.device('cpu')
 
         # net info

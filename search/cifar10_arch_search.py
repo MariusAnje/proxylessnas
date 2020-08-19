@@ -28,7 +28,7 @@ ref_values = {
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--path', type=str, default="./experiment")
-parser.add_argument('--gpu', help='gpu available', default='0')
+parser.add_argument('--gpu', type=str, help='gpu available', default='0')
 parser.add_argument('--resume', action='store_true')
 parser.add_argument('--debug', help='freeze the weight parameters', action='store_true')
 parser.add_argument('--manual_seed', default=0, type=int)

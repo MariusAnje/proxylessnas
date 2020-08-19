@@ -35,8 +35,11 @@ class QuantCIFARProxylessNASNets(ProxylessNASNets):
                 for w_f in w_frac_params:
                     for a_i in a_int_params:
                         for a_f in a_frac_params:
-                            conv = MixedEdge(candidate_ops=build_candidate_ops(conv_candidates, input_channel, width, 1, 'weight_bn_act', [w_i,w_f,a_i,a_f]), )
-                            layer_op.append(conv)
+                            # conv = MixedEdge(candidate_ops=build_candidate_ops(conv_candidates, input_channel, width, 1, 'weight_bn_act', [w_i,w_f,a_i,a_f]), )
+                            # layer_op.append(conv)
+                            conv = candidate_ops=build_candidate_ops(conv_candidates, input_channel, width, 1, 'weight_bn_act', [w_i,w_f,a_i,a_f])
+                            layer_op += conv
+                            
 
             input_channel = width
             blocks.append(MixedEdge(layer_op))

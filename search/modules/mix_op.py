@@ -168,7 +168,7 @@ class MixedEdge(MyModule):
     @property
     def module_str(self):
         chosen_index, probs = self.chosen_index
-        return 'Mix(%s, %.3f)' % (self.candidate_ops[chosen_index].module_str, probs)
+        return 'Mix(%s, %.5f)' % (self.candidate_ops[chosen_index].module_str, probs)
 
     @property
     def config(self):
@@ -230,6 +230,7 @@ class MixedEdge(MyModule):
         if self.AP_path_wb.grad is not None:
             binary_grads = self.AP_path_wb.grad.data
         else:
+            print("here")
             binary_grads = torch.zeros_like(self.AP_path_wb)
         if self.active_op.is_zero_layer():
             self.AP_path_alpha.grad = None
