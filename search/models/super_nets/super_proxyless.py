@@ -23,10 +23,22 @@ class CIFARProxylessNASNets(ProxylessNASNets):
         # blocks
         blocks = []
         pool_list = [1,3,5]
+        w_int_params = (1,3)
+        w_frac_params = (3,6)
+        a_int_params = (1,3)
+        a_frac_params = (3,6)
+
         for i, width in enumerate(width_stages, 0):
-            conv_op = MixedEdge(candidate_ops=build_candidate_ops(conv_candidates, input_channel, width, 1, 'weight_bn_act', [3,8,3,8]), )
+            layer_op = []
+            for w_i in w_int_params:
+                for w_f in w_frac_params:
+                    for a_i in a_int_params:
+                        for a_f in a_frac_params:
+                            conv = MixedEdge(candidate_ops=build_candidate_ops(conv_candidates, input_channel, width, 1, 'weight_bn_act', [w_i,w_f,a_i,a_f]), )
+                            layer_op.append(conv)
+
             input_channel = width
-            blocks.append(conv_op)
+            blocks.append(MixedEdge(layer_op))
             if i in pool_list:
                 blocks.append(PoolingLayer(input_channel, width, 'max'))
 
