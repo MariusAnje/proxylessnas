@@ -4,6 +4,7 @@
 
 import torch
 import torch.nn as nn
+import copy
 
 
 def build_activation(act_func, inplace=True):
@@ -51,8 +52,10 @@ def detach_variable(inputs):
     if isinstance(inputs, tuple):
         return tuple([detach_variable(x) for x in inputs])
     else:
+        requires_grad = inputs.requires_grad
         x = inputs.detach()
-        x.requires_grad = inputs.requires_grad
+        # x.requires_grad = requires_grad
+        x.requires_grad = True
         return x
 
 

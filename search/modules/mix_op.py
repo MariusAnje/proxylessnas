@@ -281,11 +281,13 @@ class ArchGradientFunction(torch.autograd.Function):
         with torch.enable_grad():
             output = run_func(detached_x)
         ctx.save_for_backward(detached_x, output)
+        ctx.happier = (detached_x, output)
         return output.data
 
     @staticmethod
     def backward(ctx, grad_output):
-        detached_x, output = ctx.saved_tensors
+        detached_x, output = ctx.happier
+        # detached_x, output = ctx.saved_tensors
 
         grad_x = torch.autograd.grad(output, detached_x, grad_output, only_inputs=True)
         # compute gradients w.r.t. binary_gates
