@@ -8,9 +8,10 @@ from torch.nn.parameter import Parameter
 import torch.nn.functional as F
 
 from modules.layers import *
+from modules.layers import QuantConvLayer
 
 
-def build_candidate_ops(candidate_ops, in_channels, out_channels, stride, ops_order):
+def build_candidate_ops(candidate_ops, in_channels, out_channels, stride, ops_order, Q=None):
     if candidate_ops is None:
         raise ValueError('please specify a candidate set')
 
@@ -43,16 +44,25 @@ def build_candidate_ops(candidate_ops, in_channels, out_channels, stride, ops_or
     })
 
     name2ops.update({
-        '3x3_MBConv1': lambda in_C, out_C, S: MBInvertedConvLayer(in_C, out_C, 3, S, 1),
         'CONV1': lambda in_C, out_C, S: ConvLayer(in_C, out_C, 1, S),
         'CONV3': lambda in_C, out_C, S: ConvLayer(in_C, out_C, 3, S),
         'CONV5': lambda in_C, out_C, S: ConvLayer(in_C, out_C, 5, S),
         'CONV7': lambda in_C, out_C, S: ConvLayer(in_C, out_C, 7, S),
+        
+        'QCONV1': lambda in_C, out_C, S, Q: QuantConvLayer(in_C, out_C, 1, S, quant_params=Q),
+        'QCONV3': lambda in_C, out_C, S, Q: QuantConvLayer(in_C, out_C, 3, S, quant_params=Q),
+        'QCONV5': lambda in_C, out_C, S, Q: QuantConvLayer(in_C, out_C, 5, S, quant_params=Q),
+        'QCONV7': lambda in_C, out_C, S, Q: QuantConvLayer(in_C, out_C, 7, S, quant_params=Q),
     })
 
-    return [
-        name2ops[name](in_channels, out_channels, stride) for name in candidate_ops
-    ]
+    if Q is None:
+        return [
+            name2ops[name](in_channels, out_channels, stride) for name in candidate_ops
+        ]
+    else:
+        return [
+            name2ops[name](in_channels, out_channels, stride, Q) for name in candidate_ops
+        ]
 
 
 class MixedEdge(MyModule):

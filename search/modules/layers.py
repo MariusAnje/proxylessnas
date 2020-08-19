@@ -4,7 +4,52 @@
 
 from utils import *
 from collections import OrderedDict
+from torch import nn
+import torch.nn.functional as F
+import torch
 
+def quantize(x, num_int_bits, num_frac_bits, signed=True):
+    precision = 1 / 2 ** num_frac_bits
+    x = torch.round(x / precision) * precision
+    if signed is True:
+        bound = 2 ** (num_int_bits - 1)
+        return torch.clamp(x, -bound, bound-precision)
+    else:
+        bound = 2 ** num_int_bits
+        return torch.clamp(x, 0, bound-precision)
+
+class QuantValue(nn.Module):
+    """
+    Quantization
+    """
+    def __init__(self, N, m):
+        super(QuantValue, self).__init__()
+        self.N = N
+        self.m = m
+        self.quant = QuantValue_F.apply
+
+    def forward(self, x):
+        return self.quant(x, self.N, self.m)
+    
+    def extra_repr(self):
+        s = ('N = %d, m = %d'%(self.N, self.m))
+        return s
+
+class QuantValue_F(torch.autograd.Function):
+    """
+    res = clamp(round(input/pow(2,-m)) * pow(2, -m), -pow(2, N-1), pow(2, N-1) - 1)
+    """
+
+    @staticmethod 
+    def forward(ctx, inputs, N, m):
+        Q = pow(2, N - 1) - 1
+        delt = pow(2, - m)
+        M = (inputs.to(torch.float32)/delt).round().clamp(-Q-1,Q)
+        return delt*M
+    
+    @staticmethod
+    def backward(ctx, g):
+        return g , None, None
 
 def set_layer_from_config(layer_config):
     if layer_config is None:
@@ -123,7 +168,7 @@ class My2DLayer(MyModule):
 class ConvLayer(My2DLayer):
 
     def __init__(self, in_channels, out_channels,
-                 kernel_size=3, stride=1, dilation=1, groups=1, bias=False, has_shuffle=False,
+                 kernel_size=3, stride=1, dilation=1, groups=1, bias=True, has_shuffle=False,
                  use_bn=True, act_func='relu', dropout_rate=0, ops_order='weight_bn_act'):
         self.kernel_size = kernel_size
         self.stride = stride
@@ -189,6 +234,94 @@ class ConvLayer(My2DLayer):
     def get_flops(self, x):
         return count_conv_flop(self.conv, x), self.forward(x)
 
+
+class QuantConvLayer(My2DLayer):
+
+    def __init__(self, in_channels, out_channels,
+                 kernel_size=3, stride=1, dilation=1, groups=1, bias=True, has_shuffle=False,
+                 use_bn=True, act_func='relu', dropout_rate=0, ops_order='weight_bn_act', quant_params=None):
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.dilation = dilation
+        self.groups = groups
+        self.bias = bias
+        self.has_shuffle = has_shuffle
+        self.quant_params = quant_params
+        super(QuantConvLayer, self).__init__(in_channels, out_channels, use_bn, act_func, dropout_rate, ops_order)
+        self.quant_weight = QuantValue(quant_params[0] + quant_params[1], quant_params[1])
+        self.quant_act    = QuantValue(quant_params[2] + quant_params[3], quant_params[3])
+
+    def weight_op(self):
+        padding = get_same_padding(self.kernel_size)
+        if isinstance(padding, int):
+            padding *= self.dilation
+        else:
+            padding[0] *= self.dilation
+            padding[1] *= self.dilation
+
+        weight_dict = OrderedDict()
+        weight_dict['conv'] = nn.Conv2d(
+            self.in_channels, self.out_channels, kernel_size=self.kernel_size, stride=self.stride, padding=padding,
+            dilation=self.dilation, groups=self.groups, bias=self.bias
+        )
+        if self.has_shuffle and self.groups > 1:
+            weight_dict['shuffle'] = ShuffleLayer(self.groups)
+
+        return weight_dict
+
+    @property
+    def module_str(self):
+        if isinstance(self.kernel_size, int):
+            kernel_size = (self.kernel_size, self.kernel_size)
+        else:
+            kernel_size = self.kernel_size
+        quant_params = self.quant_params
+        if self.groups == 1:
+            if self.dilation > 1:
+                return '%dx%d_DilatedConv' % (kernel_size[0], kernel_size[1])
+            else:
+                return '%dx%d_%d,%d+%d,%dQuantConv' % (kernel_size[0], kernel_size[1], quant_params[0], quant_params[1], quant_params[2], quant_params[3])
+        else:
+            if self.dilation > 1:
+                return '%dx%d_DilatedGroupConv' % (kernel_size[0], kernel_size[1])
+            else:
+                return '%dx%d_GroupConv' % (kernel_size[0], kernel_size[1])
+
+    @property
+    def config(self):
+        return {
+            'name': ConvLayer.__name__,
+            'kernel_size': self.kernel_size,
+            'stride': self.stride,
+            'dilation': self.dilation,
+            'groups': self.groups,
+            'bias': self.bias,
+            'has_shuffle': self.has_shuffle,
+            **super(QuantConvLayer, self).config,
+        }
+
+    @staticmethod
+    def build_from_config(config):
+        return QuantConvLayer(**config)
+
+    def get_flops(self, x):
+        return count_conv_flop(self.conv, x), self.forward(x)
+    
+    def forward(self, x):
+        for module in self._modules.values():
+            if isinstance(module, nn.Conv2d):
+                op = module
+                weight, bias, stride, padding, dilation, groups = \
+                    op.weight, op.bias, op.stride, op.padding, op.dilation, op.groups
+                weight = self.quant_weight(weight)
+                if bias is not None:
+                    bias   = self.quant_weight(bias)
+
+                x = F.conv2d(x, weight, bias, stride, padding, dilation, groups)
+                x = self.quant_act(x)
+            else:
+                x = module(x)
+        return x
 
 class DepthConvLayer(My2DLayer):
 

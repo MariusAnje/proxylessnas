@@ -24,7 +24,7 @@ class CIFARProxylessNASNets(ProxylessNASNets):
         blocks = []
         pool_list = [1,3,5]
         for i, width in enumerate(width_stages, 0):
-            conv_op = MixedEdge(candidate_ops=build_candidate_ops(conv_candidates, input_channel, width, 1, 'weight_bn_act',), )
+            conv_op = MixedEdge(candidate_ops=build_candidate_ops(conv_candidates, input_channel, width, 1, 'weight_bn_act', [3,8,3,8]), )
             input_channel = width
             blocks.append(conv_op)
             if i in pool_list:

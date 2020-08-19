@@ -136,14 +136,13 @@ if __name__ == '__main__':
     args.n_cell_stages = [int(val) for val in args.n_cell_stages.split(',')]
     args.stride_stages = [int(val) for val in args.stride_stages.split(',')]
     args.conv_candidates = [
-        'CONV1', 'CONV3', 'CONV5', 'CONV7'
+        'QCONV1', 'QCONV3', 'QCONV5', 'QCONV7'
     ]
     super_net = CIFARProxylessNASNets(
         width_stages=args.width_stages, n_cell_stages=args.n_cell_stages, stride_stages=args.stride_stages,
         conv_candidates=args.conv_candidates, n_classes=run_config.data_provider.n_classes, width_mult=args.width_mult,
         bn_param=(args.bn_momentum, args.bn_eps), dropout_rate=args.dropout
     )
-
     # build arch search config from args
     if args.arch_opt_type == 'adam':
         args.arch_opt_param = {
