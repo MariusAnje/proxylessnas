@@ -62,7 +62,8 @@ class CIFAR10RunConfig(RunConfig):
         self.resize_scale = resize_scale
         self.distort_color = distort_color
         self.gpu = kwargs['gpu']
-        print(kwargs.keys())
+        self.quant = kwargs['quant']
+        # print(kwargs.keys())
 
     @property
     def data_config(self):

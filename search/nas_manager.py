@@ -66,7 +66,7 @@ class GradientArchSearchConfig(ArchSearchConfig):
         self.reg_loss_type = grad_reg_loss_type
         self.reg_loss_params = {} if grad_reg_loss_params is None else grad_reg_loss_params
 
-        print(kwargs.keys())
+        # print(kwargs.keys())
 
     def get_update_schedule(self, nBatch):
         schedule = {}

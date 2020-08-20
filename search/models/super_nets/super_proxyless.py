@@ -24,10 +24,14 @@ class QuantCIFARProxylessNASNets(ProxylessNASNets):
         # blocks
         blocks = []
         pool_list = [1,3,5]
-        w_int_params = (1,3)
-        w_frac_params = (3,6)
-        a_int_params = (1,3)
-        a_frac_params = (3,6)
+        # w_int_params = (1,3)
+        w_int_params = (3,)
+        # w_frac_params = (3,6)
+        w_frac_params = (6,)
+        # a_int_params = (1,3)
+        a_int_params = (3,)
+        # a_frac_params = (3,6)
+        a_frac_params = (6,)
 
         for i, width in enumerate(width_stages, 0):
             layer_op = []
