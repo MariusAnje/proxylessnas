@@ -7,6 +7,7 @@ import argparse
 from models import ImagenetRunConfig, CIFAR10RunConfig
 from nas_manager import *
 from models.super_nets.super_proxyless import SuperProxylessNASNets, CIFARProxylessNASNets, QuantCIFARProxylessNASNets
+import time
 
 # ref values
 ref_values = {
@@ -214,8 +215,21 @@ if __name__ == '__main__':
                 print('fail to load models')
 
     # warmup
+    warm_start_time = time.time()
+    warm_start_time_str = time.strftime("%Y%m%d %H:%M:%S", time.localtime())
+    print(f"\n\nWARM starting: " + warm_start_time_str + "\n\n")
     if arch_search_run_manager.warmup:
         arch_search_run_manager.warm_up(warmup_epochs=args.warmup_epochs)
 
     # joint training
+    search_start_time = time.time()
+    search_start_time_str = time.strftime("%Y%m%d %H:%M:%S", time.localtime())
+    print(f"\n\nSEARCH starting: " + search_start_time_str + "\n\n")
     arch_search_run_manager.train(fix_net_weights=args.debug)
+    search_end_time = time.time()
+    search_end_time_str = time.strftime("%Y%m%d %H:%M:%S", time.localtime())
+    print(f"\n\nSEARCH starting: " + search_end_time_str + "\n\n")
+
+    print(f"Warm time consumption: {(search_start_time - warm_start_time)/60:.2f} minutes")
+
+    print(f"Search time consumption: {(search_end_time - search_start_time)/60:.2f} minutes")
