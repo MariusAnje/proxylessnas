@@ -35,9 +35,4 @@ ncpu=`echo $LSB_HOSTS |wc -w`
 module load cuda/cuda10.1 
 module load pytorch/pytorch1.5.1 
 ##########################Software run command############################## 
-##python3 /data/users/xiaowei/pytorch_test/pytorch_mnist.py 
-# python3 -u main.py nas  -ns -e 30 -ep 51 --train_epochs 30 --augment
-# python3 -u main.py joint  -ns -e 30 -ep 500 --train_epochs 30 --augment
-# python3 -u main.py quantization -ns -e 30 -ep 10 --train_epochs 10 --rollout_filename ./experiment/rollout_record0728_2337_46 --method comp --wsSize 9 -b 128
-python3 -u finetune.py
-##>> /data/users/xiaowei/pytorch_test/xiaowei_test.log 
+python3 cifar10_arch_search.py --train_batch_size 128 --n_worker 0 --warmup_epochs 20 --n_epochs 200 --print_frequency 100
