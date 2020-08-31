@@ -33,6 +33,7 @@ class LatencyEstimator(object):
             fname = "C:\\Users\\Mariu/.torch/proxyless_nas\\file.lzhu.me/projects/proxylessNAS/LatencyTools\\mobile_trim.yaml"
         else:
             fname = "/afs/crc.nd.edu/user/z/zyan2/Private/data/mobile_trim.yaml"
+            fname = "/data/users/zheyuyan/Private/data/mobile_trim.yaml"
 
         with open(fname, 'r') as fp:
             self.lut = yaml.load(fp)

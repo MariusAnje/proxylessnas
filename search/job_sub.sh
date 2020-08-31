@@ -1,5 +1,5 @@
 #!/bin/bash 
-#JSUB -J zheyu_RLDR
+#JSUB -J zy_proxyless
 #JSUB -q tensorflow_sub
 #JSUB -gpgpu "num=1" 
 #JSUB -R "span[ptile=1]"
@@ -35,4 +35,4 @@ ncpu=`echo $LSB_HOSTS |wc -w`
 module load cuda/cuda10.1 
 module load pytorch/pytorch1.5.1 
 ##########################Software run command############################## 
-python3 cifar10_arch_search.py --train_batch_size 128 --n_worker 0 --warmup_epochs 20 --n_epochs 200 --print_frequency 100
+python3 cifar10_arch_search.py --train_batch_size 128 --n_worker 0 --warmup_epochs 0 --n_epochs 2 --print_frequency 100
