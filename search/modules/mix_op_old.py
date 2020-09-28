@@ -81,7 +81,6 @@ class MixedEdge(MyModule):
 
         self.log_prob = None
         self.current_prob_over_ops = None
-        self.parent = None
 
     @property
     def n_choices(self):

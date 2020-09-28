@@ -67,7 +67,7 @@ def build_candidate_ops(candidate_ops, in_channels, out_channels, stride, ops_or
 
 
 class MixedEdge(MyModule):
-    MODE = None  # full, two, None, full_v2
+    MODE = "darts"  # full, two, None, full_v2
 
     def __init__(self, candidate_ops):
         super(MixedEdge, self).__init__()
@@ -162,6 +162,11 @@ class MixedEdge(MyModule):
                 x, self.AP_path_wb, run_function(self.candidate_ops, self.active_index[0]),
                 backward_function(self.candidate_ops, self.active_index[0], self.AP_path_wb)
             )
+        elif MixedEdge.MODE == 'darts':
+            probs = F.softmax(self.AP_path_alpha, dim=0)  # softmax to probability
+            output = self.candidate_ops[0](x)
+            for i in range(1, len(probs)):
+                output += self.candidate_ops[i](x)
         else:
             output = self.active_op(x)
         return output

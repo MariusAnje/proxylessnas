@@ -6,7 +6,7 @@ import argparse
 
 from models import ImagenetRunConfig
 from nas_manager import *
-from models.super_nets.super_proxyless import SuperProxylessNASNets
+from models.super_nets.super_proxyless import SuperProxylessNASNets, SubProxylessNASNets
 
 # ref values
 ref_values = {
@@ -134,14 +134,15 @@ if __name__ == '__main__':
     args.width_stages = [int(val) for val in args.width_stages.split(',')]
     args.n_cell_stages = [int(val) for val in args.n_cell_stages.split(',')]
     args.stride_stages = [int(val) for val in args.stride_stages.split(',')]
-    args.conv_candidates = [
-        '3x3_MBConv3', '3x3_MBConv6',
-        '5x5_MBConv3', '5x5_MBConv6',
-        '7x7_MBConv3', '7x7_MBConv6',
-    ]
-    super_net = SuperProxylessNASNets(
+    # args.conv_candidates = [
+    #     '3x3_MBConv3', '3x3_MBConv6',
+    #     '5x5_MBConv3', '5x5_MBConv6',
+    #     '7x7_MBConv3', '7x7_MBConv6',
+    # ]
+    args.conv_candidates = [[0,5],[0,5],[0,5],[0,5],[0,5],[0,5]]
+    super_net = SubProxylessNASNets(
         width_stages=args.width_stages, n_cell_stages=args.n_cell_stages, stride_stages=args.stride_stages,
-        conv_candidates=args.conv_candidates, n_classes=run_config.data_provider.n_classes, width_mult=args.width_mult,
+        conv_candidate_space=args.conv_candidates, n_classes=run_config.data_provider.n_classes, width_mult=args.width_mult,
         bn_param=(args.bn_momentum, args.bn_eps), dropout_rate=args.dropout
     )
 

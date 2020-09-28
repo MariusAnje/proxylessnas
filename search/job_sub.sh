@@ -35,4 +35,5 @@ ncpu=`echo $LSB_HOSTS |wc -w`
 module load cuda/cuda10.1 
 module load pytorch/pytorch1.5.1 
 ##########################Software run command############################## 
-python3 cifar10_arch_search.py --train_batch_size 128 --n_worker 0 --warmup_epochs 20 --n_epochs 200 --print_frequency 100
+# python3 cifar10_arch_search.py --train_batch_size 128 --n_worker 0 --warmup_epochs 20 --n_epochs 200 --print_frequency 100
+python3 imagenet_arch_search.py --warmup_epochs 0 --arch_algo rl

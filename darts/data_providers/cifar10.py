@@ -5,18 +5,20 @@
 import torch.utils.data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
+import torchvision
 
 from data_providers.base_provider import *
+import os
 
-
-class ImagenetDataProvider(DataProvider):
+class CIFARDataProvider(DataProvider):
 
     def __init__(self, save_path=None, train_batch_size=256, test_batch_size=512, valid_size=None,
                  n_worker=32, resize_scale=0.08, distort_color=None):
 
         self._save_path = save_path
         train_transforms = self.build_train_transform(distort_color, resize_scale)
-        train_dataset = datasets.ImageFolder(self.train_path, train_transforms)
+        test_transforms = transforms.Compose([transforms.ToTensor(),self.normalize])
+        train_dataset = torchvision.datasets.CIFAR10(root=self.train_path, train=True, download=False, transform=train_transforms)
 
         if valid_size is not None:
             if isinstance(valid_size, float):
@@ -24,17 +26,13 @@ class ImagenetDataProvider(DataProvider):
             else:
                 assert isinstance(valid_size, int), 'invalid valid_size: %s' % valid_size
             train_indexes, valid_indexes = self.random_sample_valid_set(
-                [cls for _, cls in train_dataset.samples], valid_size, self.n_classes,
+                train_dataset.targets, valid_size, self.n_classes,
             )
             train_sampler = torch.utils.data.sampler.SubsetRandomSampler(train_indexes)
             valid_sampler = torch.utils.data.sampler.SubsetRandomSampler(valid_indexes)
 
-            valid_dataset = datasets.ImageFolder(self.train_path, transforms.Compose([
-                transforms.Resize(self.resize_value),
-                transforms.CenterCrop(self.image_size),
-                transforms.ToTensor(),
-                self.normalize,
-            ]))
+        
+            valid_dataset = torchvision.datasets.CIFAR10(root=self.train_path, train=True, download=False, transform=test_transforms)
 
             self.train = torch.utils.data.DataLoader(
                 train_dataset, batch_size=train_batch_size, sampler=train_sampler,
@@ -52,12 +50,8 @@ class ImagenetDataProvider(DataProvider):
             self.valid = None
 
         self.test = torch.utils.data.DataLoader(
-            datasets.ImageFolder(self.valid_path, transforms.Compose([
-                transforms.Resize(self.resize_value),
-                transforms.CenterCrop(self.image_size),
-                transforms.ToTensor(),
-                self.normalize,
-            ])), batch_size=test_batch_size, shuffle=False, num_workers=n_worker, pin_memory=True,
+            torchvision.datasets.CIFAR10(root=self.valid_path, train=False, download=False, transform=test_transforms), 
+            batch_size=test_batch_size, shuffle=False, num_workers=n_worker, pin_memory=True,
         )
 
         if self.valid is None:
@@ -65,7 +59,7 @@ class ImagenetDataProvider(DataProvider):
 
     @staticmethod
     def name():
-        return 'imagenet'
+        return 'cifar10'
 
     @property
     def data_shape(self):
@@ -73,14 +67,16 @@ class ImagenetDataProvider(DataProvider):
 
     @property
     def n_classes(self):
-        return 1000
+        return 10
 
     @property
     def save_path(self):
         if self._save_path is None:
-            # self._save_path = '/dataset/imagenet'
-            # self._save_path = 'E:/imagenet'
-            self._save_path = '/data/data/share/imagenet'
+            if os.name == "nt":
+                self._save_path = "~/testCode/data"
+            else:
+                self._save_path = "~/Private/data/CIFAR10"
+            # self._save_path = '/dataset/CIFAR10'
         return self._save_path
 
     @property
@@ -89,15 +85,15 @@ class ImagenetDataProvider(DataProvider):
 
     @property
     def train_path(self):
-        return os.path.join(self.save_path, 'train')
+        return os.path.join(self.save_path)
 
     @property
     def valid_path(self):
-        return os.path.join(self._save_path, 'val')
+        return os.path.join(self._save_path)
 
     @property
     def normalize(self):
-        return transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        return transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
 
     def build_train_transform(self, distort_color, resize_scale):
         print('Color jitter: %s' % distort_color)
@@ -109,14 +105,14 @@ class ImagenetDataProvider(DataProvider):
             color_transform = None
         if color_transform is None:
             train_transforms = transforms.Compose([
-                transforms.RandomResizedCrop(self.image_size, scale=(resize_scale, 1.0)),
+                transforms.RandomCrop(32, padding=4),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 self.normalize,
             ])
         else:
             train_transforms = transforms.Compose([
-                transforms.RandomResizedCrop(self.image_size, scale=(resize_scale, 1.0)),
+                transforms.RandomCrop(32, padding=4),
                 transforms.RandomHorizontalFlip(),
                 color_transform,
                 transforms.ToTensor(),
@@ -126,8 +122,12 @@ class ImagenetDataProvider(DataProvider):
 
     @property
     def resize_value(self):
-        return 256
+        return 32
 
     @property
     def image_size(self):
-        return 224
+        return 32
+
+if __name__ == "__main__":
+    a = CIFARDataProvider()
+    print(a.train.next())

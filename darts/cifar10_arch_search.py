@@ -4,9 +4,10 @@
 
 import argparse
 
-from models import ImagenetRunConfig
+from models import ImagenetRunConfig, CIFAR10RunConfig
 from nas_manager import *
-from models.super_nets.super_proxyless import SuperProxylessNASNets
+from models.super_nets.super_proxyless import SuperProxylessNASNets, CIFARProxylessNASNets, QuantCIFARProxylessNASNets
+import time
 
 # ref values
 ref_values = {
@@ -28,22 +29,23 @@ ref_values = {
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--path', type=str, default="./experiment")
-parser.add_argument('--gpu', help='gpu available', default='0')
+parser.add_argument('--gpu', type=str, help='gpu available', default='0')
 parser.add_argument('--resume', action='store_true')
 parser.add_argument('--debug', help='freeze the weight parameters', action='store_true')
 parser.add_argument('--manual_seed', default=0, type=int)
 
 """ run config """
 parser.add_argument('--n_epochs', type=int, default=120)
-parser.add_argument('--init_lr', type=float, default=0.025)
+# parser.add_argument('--init_lr', type=float, default=0.025)
+parser.add_argument('--init_lr', type=float, default=1e-3)
 parser.add_argument('--lr_schedule_type', type=str, default='cosine')
 # lr_schedule_param
 
-parser.add_argument('--dataset', type=str, default='imagenet', choices=['imagenet', 'cifar10'])
+parser.add_argument('--dataset', type=str, default='cifar10', choices=['imagenet', 'cifar10'])
 parser.add_argument('--train_batch_size', type=int, default=256)
-parser.add_argument('--test_batch_size', type=int, default=1000)
-parser.add_argument('--valid_size', type=int, default=50000) # this line deleted
-# parser.add_argument('--valid_size', type=int, default=1) # this line added
+parser.add_argument('--test_batch_size', type=int, default=256)
+# parser.add_argument('--valid_size', type=int, default=50000) # this line deleted
+parser.add_argument('--valid_size', type=int, default=None) # this line added
 
 parser.add_argument('--opt_type', type=str, default='sgd', choices=['sgd'])
 parser.add_argument('--momentum', type=float, default=0.9)  # opt_param
@@ -52,7 +54,7 @@ parser.add_argument('--weight_decay', type=float, default=4e-5)
 parser.add_argument('--label_smoothing', type=float, default=0.1)
 parser.add_argument('--no_decay_keys', type=str, default=None, choices=[None, 'bn', 'bn#bias'])
 
-parser.add_argument('--model_init', type=str, default='he_fout', choices=['he_fin', 'he_fout'])
+parser.add_argument('--model_init', type=str, default='he_fin', choices=['he_fin', 'he_fout', 'None'])
 parser.add_argument('--init_div_groups', action='store_true')
 parser.add_argument('--validation_frequency', type=int, default=1)
 parser.add_argument('--print_frequency', type=int, default=10)
@@ -62,7 +64,7 @@ parser.add_argument('--resize_scale', type=float, default=0.08)
 parser.add_argument('--distort_color', type=str, default='normal', choices=['normal', 'strong', 'None'])
 
 """ net config """
-parser.add_argument('--width_stages', type=str, default='24,40,80,96,192,320')
+parser.add_argument('--width_stages', type=str, default='128, 128, 256, 256, 512, 512')
 parser.add_argument('--n_cell_stages', type=str, default='4,4,4,4,4,1')
 parser.add_argument('--stride_stages', type=str, default='2,2,2,1,2,1')
 parser.add_argument('--width_mult', type=float, default=1.0)
@@ -73,7 +75,7 @@ parser.add_argument('--dropout', type=float, default=0)
 # architecture search config
 """ arch search algo and warmup """
 parser.add_argument('--arch_algo', type=str, default='grad', choices=['grad', 'rl'])
-parser.add_argument('--warmup_epochs', type=int, default=40)
+parser.add_argument('--warmup_epochs', type=int, default=5)
 """ shared hyper-parameters """
 parser.add_argument('--arch_init_type', type=str, default='normal', choices=['normal', 'uniform'])
 parser.add_argument('--arch_init_ratio', type=float, default=1e-3)
@@ -99,6 +101,8 @@ parser.add_argument('--rl_update_per_epoch', action='store_true')
 parser.add_argument('--rl_update_steps_per_epoch', type=int, default=300)
 parser.add_argument('--rl_baseline_decay_weight', type=float, default=0.99)
 parser.add_argument('--rl_tradeoff_ratio', type=float, default=0.1)
+""" Other hyper-parameters"""
+parser.add_argument('--quant', type=bool, default=True)
 
 
 if __name__ == '__main__':
@@ -108,7 +112,7 @@ if __name__ == '__main__':
     torch.cuda.manual_seed_all(args.manual_seed)
     np.random.seed(args.manual_seed)
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+    # os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
 
     os.makedirs(args.path, exist_ok=True)
 
@@ -118,7 +122,7 @@ if __name__ == '__main__':
         'momentum': args.momentum,
         'nesterov': not args.no_nesterov,
     }
-    run_config = ImagenetRunConfig(
+    run_config = CIFAR10RunConfig(
         **args.__dict__
     )
 
@@ -134,17 +138,25 @@ if __name__ == '__main__':
     args.width_stages = [int(val) for val in args.width_stages.split(',')]
     args.n_cell_stages = [int(val) for val in args.n_cell_stages.split(',')]
     args.stride_stages = [int(val) for val in args.stride_stages.split(',')]
-    args.conv_candidates = [
-        '3x3_MBConv3', '3x3_MBConv6',
-        '5x5_MBConv3', '5x5_MBConv6',
-        '7x7_MBConv3', '7x7_MBConv6',
-    ]
-    super_net = SuperProxylessNASNets(
-        width_stages=args.width_stages, n_cell_stages=args.n_cell_stages, stride_stages=args.stride_stages,
-        conv_candidates=args.conv_candidates, n_classes=run_config.data_provider.n_classes, width_mult=args.width_mult,
-        bn_param=(args.bn_momentum, args.bn_eps), dropout_rate=args.dropout
-    )
 
+    if args.quant:
+        args.conv_candidates = [
+            'QCONV1', 'QCONV3', 'QCONV5', 'QCONV7'
+        ]
+        super_net = QuantCIFARProxylessNASNets(
+            width_stages=args.width_stages, n_cell_stages=args.n_cell_stages, stride_stages=args.stride_stages,
+            conv_candidates=args.conv_candidates, n_classes=run_config.data_provider.n_classes, width_mult=args.width_mult,
+            bn_param=(args.bn_momentum, args.bn_eps), dropout_rate=args.dropout
+        )
+    else:
+        args.conv_candidates = [
+            'CONV1', 'CONV3', 'CONV5', 'CONV7'
+        ]
+        super_net = CIFARProxylessNASNets(
+            width_stages=args.width_stages, n_cell_stages=args.n_cell_stages, stride_stages=args.stride_stages,
+            conv_candidates=args.conv_candidates, n_classes=run_config.data_provider.n_classes, width_mult=args.width_mult,
+            bn_param=(args.bn_momentum, args.bn_eps), dropout_rate=args.dropout
+        )
     # build arch search config from args
     if args.arch_opt_type == 'adam':
         args.arch_opt_param = {
@@ -203,8 +215,21 @@ if __name__ == '__main__':
                 print('fail to load models')
 
     # warmup
+    warm_start_time = time.time()
+    warm_start_time_str = time.strftime("%Y%m%d %H:%M:%S", time.localtime())
+    print(f"\n\nWARM starting: " + warm_start_time_str + "\n\n")
     if arch_search_run_manager.warmup:
         arch_search_run_manager.warm_up(warmup_epochs=args.warmup_epochs)
 
     # joint training
+    search_start_time = time.time()
+    search_start_time_str = time.strftime("%Y%m%d %H:%M:%S", time.localtime())
+    print(f"\n\nSEARCH starting: " + search_start_time_str + "\n\n")
     arch_search_run_manager.train(fix_net_weights=args.debug)
+    search_end_time = time.time()
+    search_end_time_str = time.strftime("%Y%m%d %H:%M:%S", time.localtime())
+    print(f"\n\nSEARCH starting: " + search_end_time_str + "\n\n")
+
+    print(f"Warm time consumption: {(search_start_time - warm_start_time)/60:.2f} minutes")
+
+    print(f"Search time consumption: {(search_end_time - search_start_time)/60:.2f} minutes")

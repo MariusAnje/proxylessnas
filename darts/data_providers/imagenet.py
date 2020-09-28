@@ -7,7 +7,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 
 from data_providers.base_provider import *
-
+import os
 
 class ImagenetDataProvider(DataProvider):
 
@@ -79,8 +79,10 @@ class ImagenetDataProvider(DataProvider):
     def save_path(self):
         if self._save_path is None:
             # self._save_path = '/dataset/imagenet'
-            # self._save_path = 'E:/imagenet'
-            self._save_path = '/data/data/share/imagenet'
+            if os.name == "nt":
+                self._save_path = 'E:/imagenet'
+            else:
+                self._save_path = '/data/data/share/imagenet'
         return self._save_path
 
     @property
