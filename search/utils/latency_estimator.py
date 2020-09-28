@@ -34,6 +34,8 @@ class LatencyEstimator(object):
         else:
             # fname = "/afs/crc.nd.edu/user/z/zyan2/Private/data/mobile_trim.yaml"
             fname = "~/Private/data/mobile_trim.yaml"
+            fname = "/afs/crc.nd.edu/user/z/zyan2/Private/data/mobile_trim.yaml"
+            fname = "/data/users/zheyuyan/Private/data/mobile_trim.yaml"
 
         with open(fname, 'r') as fp:
             self.lut = yaml.load(fp)
